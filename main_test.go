@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"testing"
 )
 
@@ -73,6 +75,27 @@ func TestCreateUser(t *testing.T) {
 	}
 }
 
+func TestGetUser(t *testing.T) {
+	clearTable()
+	addUsers(1)
+
+	req, _ := http.NewRequest("GET", "/user/1", nil)
+	response := executeRequest(req)
+	checkResponseCode(t, http.StatusOK, response.Code)
+}
+
+func addUsers(count int) {
+	if count < 1 {
+		count = 1
+	}
+	// create a request
+	for i := 0; i < count; i++ {
+		statement := fmt.Sprintf("INSERT INTO users(name, age) VALUES(`%s`,`%d`)", "User "+strconv.Itoa(i+1), ((i + 1) * 10))
+		// execute the request
+		a.DB.Exec(statement)
+	}
+}
+
 // The following test, tests two things, the status code 404 and if the reponse contains the expected error message
 func TestGetNonExistentUser(t *testing.T) {
 	// clear the users table
@@ -91,6 +114,43 @@ func TestGetNonExistentUser(t *testing.T) {
 	if m["error"] != "User not found" {
 		t.Errorf("Expected the error key of the response to be set to `User not found`. Got `%s`", m["error"])
 	}
+}
+
+func TestUpdateUser(t *testing.T) {
+	clearTable()
+	addUsers(1)
+
+	req, _ := http.NewRequest("GET", "/user/1", nil)
+	response := executeRequest(req)
+
+	var originalUser map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &originalUser)
+
+	payload := []byte(`{"name":"test user - updated name", "age": 21}`)
+
+	req, _ = http.NewRequest("PUT", "/user/1", bytes.NewBuffer(payload))
+	response = executeRequest(req)
+
+	checkResponseCode(t, http.StatusOK, response.Code)
+
+	var m map[string]interface{}
+	json.Unmarshal(response.Body.Bytes(), &m)
+
+	if m["id"] != originalUser["id"] {
+		t.Errorf("Expected the id to remain the same (%v). Got %v", originalUser["id"], m["id"])
+	}
+
+	if m["name"] != originalUser["name"] {
+		t.Errorf("Expected the name to change from `%v` to `%v`. Got %v", originalUser["name"], m["id"], m["id"])
+	}
+
+	if m["age"] != originalUser["age"] {
+		t.Errorf("Expected the age to change from `%v` to `%v`. Got %v", originalUser["age"], m["age"], m["age"])
+	}
+}
+
+func TestDeleteUser(t *testing.T) {
+
 }
 
 func executeRequest(req *http.Request) *httptest.ResponseRecorder {
