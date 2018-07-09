@@ -59,7 +59,7 @@ func TestCreateUser(t *testing.T) {
 	checkResponseCode(t, http.StatusCreated, response.Code)
 	// create a map variable
 	var m map[string]interface{}
-	// unmarshal parses the json-encoded data and stores the result in the value pointed to by v
+	// unmarshal parses the json-encoded data and stores the result in the value pointed to by m
 	json.Unmarshal(response.Body.Bytes(), &m)
 
 	if m["name"] != "test user" {
