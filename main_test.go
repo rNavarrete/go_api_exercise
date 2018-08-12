@@ -17,7 +17,6 @@ var a App
 func TestMain(m *testing.M) {
 	a = App{}
 	a.Initialize("root", "godfather", "rest_api_example")
-
 	ensureTableExists()
 
 	code := m.Run()
@@ -29,7 +28,8 @@ func TestMain(m *testing.M) {
 }
 
 func ensureTableExists() {
-	if _, err := a.DB.Exec(tableCreationQuery); err != nil {
+	_, err := a.DB.Exec(tableCreationQuery)
+	if err != nil {
 		log.Fatal(err)
 	}
 }
@@ -52,7 +52,10 @@ func TestCreateUser(t *testing.T) {
 	// create a payload with fake user data
 	payload := []byte(`{"name": "test user", "age": 30}`)
 	// create a POST request to the /user endpoint and attach our userdata payload
-	req, _ := http.NewRequest("POST", "/user", bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", "/user", bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
 	// execute the request and capture the request
 	response := executeRequest(req)
 	// make sure that the response code is a a successful one (201)
@@ -61,12 +64,11 @@ func TestCreateUser(t *testing.T) {
 	var m map[string]interface{}
 	// unmarshal parses the json-encoded data and stores the result in the value pointed to by m
 	json.Unmarshal(response.Body.Bytes(), &m)
-
 	if m["name"] != "test user" {
 		t.Errorf("Expected user name to be `test user`. Got `%v'", m["name"])
 	}
-	if m["age"] != "30" {
-		t.Errorf("Expected user age to be `30`. Got `%v'", m["age"])
+	if m["age"] != 30.0 {
+		t.Errorf("Expected user age to be `30`. Got `%#v`", m["age"])
 	}
 	// the id is compared to 1.0 because JSON unmarshaling converts numbers to
 	//floats, when the target is a map[string]interface{}
@@ -90,7 +92,7 @@ func addUsers(count int) {
 	}
 	// create a request
 	for i := 0; i < count; i++ {
-		statement := fmt.Sprintf("INSERT INTO users(name, age) VALUES(`%s`,`%d`)", "User "+strconv.Itoa(i+1), ((i + 1) * 10))
+		statement := fmt.Sprintf("INSERT INTO users(name, age) VALUES('%s','%d')", "User "+strconv.Itoa(i+1), ((i + 1) * 10))
 		// execute the request
 		a.DB.Exec(statement)
 	}
@@ -140,11 +142,11 @@ func TestUpdateUser(t *testing.T) {
 		t.Errorf("Expected the id to remain the same (%v). Got %v", originalUser["id"], m["id"])
 	}
 
-	if m["name"] != originalUser["name"] {
+	if m["name"] == originalUser["name"] {
 		t.Errorf("Expected the name to change from `%v` to `%v`. Got %v", originalUser["name"], m["id"], m["id"])
 	}
 
-	if m["age"] != originalUser["age"] {
+	if m["age"] == originalUser["age"] {
 		t.Errorf("Expected the age to change from `%v` to `%v`. Got %v", originalUser["age"], m["age"], m["age"])
 	}
 }
@@ -183,13 +185,14 @@ func clearTable() {
 
 func checkResponseCode(t *testing.T, expected, actual int) {
 	if expected != actual {
-		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
+		t.Fatalf("Expected response code %d. Got %d\n", expected, actual)
 	}
 }
 
 const tableCreationQuery = `
-CREATE TABLE IF NOT EXISTS users(
-	id INT AUTO_INCREMENT PRIMARY KEY,
-	name VARCHAR(50) NOT NULL,
-	age INT NOT NULL
+CREATE TABLE IF NOT EXISTS users
+(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    age INT NOT NULL
 )`

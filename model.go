@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 )
 
@@ -18,8 +17,7 @@ func (u *user) getUser(db *sql.DB) error {
 }
 
 func (u *user) updateUser(db *sql.DB) error {
-	return errors.New("Not implemented")
-	statement := fmt.Sprintf("UPDATE users SET name=`%s`, age=%d WHERE id=%d", u.Name, u.Age)
+	statement := fmt.Sprintf("UPDATE users SET name='%s', age=%d WHERE id=%d", u.Name, u.Age, u.ID)
 	_, err := db.Exec(statement)
 	return err
 }
@@ -31,7 +29,7 @@ func (u *user) deleteUser(db *sql.DB) error {
 }
 
 func (u *user) createUser(db *sql.DB) error {
-	statement := fmt.Sprintf("INSERT INTO users(name, age) VALUES(`%s`, %d)", u.Name, u.Age)
+	statement := fmt.Sprintf("INSERT INTO users(name, age) VALUES('%s', %d)", u.Name, u.Age)
 	_, err := db.Exec(statement)
 	if err != nil {
 		return err
